@@ -1,6 +1,7 @@
 import { useState } from "react";
 import UploadForm from "./components/UploadForm";
 import RoastResult from "./components/RoastResult";
+import RoastLoader from "./components/RoastLoader";
 import { roastResume } from "./services/api";
 
 const App = () => {
@@ -28,7 +29,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 py-6 mb-10">
         <div className="max-w-2xl mx-auto px-4 text-center">
@@ -44,19 +45,22 @@ const App = () => {
       {/* Main Content */}
       <div className="px-4 pb-16">
         {error && (
-          <div className="max-w-2xl mx-auto mb-6 bg-red-50 border border-red-200 
+          <div className="max-w-2xl mx-auto mb-6 bg-red-50 border border-red-200
             rounded-xl p-4 text-red-600 text-sm text-center">
             {error}
           </div>
         )}
 
-        {result ? (
+        {isLoading ? (
+          <div className="max-w-2xl mx-auto bg-white border border-gray-200 rounded-2xl shadow-sm">
+            <RoastLoader />
+          </div>
+        ) : result ? (
           <RoastResult data={result} onReset={handleReset} />
         ) : (
           <UploadForm onSubmit={handleSubmit} isLoading={isLoading} />
         )}
       </div>
-
     </div>
   );
 };

@@ -1,223 +1,291 @@
 import { forwardRef } from "react";
 
-const getScoreColor = (score) => {
-  if (score >= 75) return "#22c55e";
-  if (score >= 50) return "#f59e0b";
-  return "#ef4444";
+const getScoreConfig = (score) => {
+    if (score >= 80) return { label: "STRONG PROFILE", emoji: "💪", color: "#10b981", glow: "rgba(16,185,129,0.5)" };
+    if (score >= 60) return { label: "NEEDS WORK", emoji: "🔧", color: "#f59e0b", glow: "rgba(245,158,11,0.5)" };
+    return { label: "MAJOR RED FLAGS", emoji: "🚨", color: "#ef4444", glow: "rgba(239,68,68,0.5)" };
 };
 
-const getScoreLabel = (score) => {
-  if (score >= 80) return "Strong Profile 💪";
-  if (score >= 60) return "Needs Work 🔧";
-  return "Major Red Flags 🚨";
+// Score circle uses pure SVG text — no HTML overlap, no html2canvas spacing bugs
+const CircleScore = ({ score, color, glow }) => {
+    const size = 148;
+    const cx = size / 2;
+    const cy = size / 2;
+    const radius = 58;
+    const circumference = 2 * Math.PI * radius;
+    const progress = (score / 100) * circumference;
+
+    return (
+        <svg width={size} height={size} style={{ flexShrink: 0 }}>
+            {/* Glow filter */}
+            <defs>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                    <feMerge>
+                        <feMergeNode in="coloredBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+
+            {/* Track ring */}
+            <circle
+                cx={cx} cy={cy} r={radius}
+                fill="none"
+                stroke="rgba(255,255,255,0.07)"
+                strokeWidth="10"
+            />
+
+            {/* Progress ring */}
+            <circle
+                cx={cx} cy={cy} r={radius}
+                fill="none"
+                stroke={color}
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={`${progress} ${circumference}`}
+                transform={`rotate(-90 ${cx} ${cy})`}
+                filter="url(#glow)"
+            />
+
+            {/* Score number — SVG text, perfectly centered, no layout bugs */}
+            <text
+                x={cx}
+                y={cy - 8}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill={color}
+                fontSize="42"
+                fontWeight="900"
+                fontFamily="'Segoe UI', system-ui, sans-serif"
+            >
+                {score}
+            </text>
+
+            {/* / 100 label — fixed 22px below center */}
+            <text
+                x={cx}
+                y={cy + 22}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="rgba(255,255,255,0.3)"
+                fontSize="11"
+                fontWeight="500"
+                fontFamily="'Segoe UI', system-ui, sans-serif"
+                letterSpacing="0.5"
+            >
+                / 100
+            </text>
+        </svg>
+    );
 };
 
-const CategoryRow = ({ icon, label, score }) => (
-  <div style={{ marginBottom: "12px" }}>
-    <div style={{
-      display: "flex", justifyContent: "space-between",
-      alignItems: "center", marginBottom: "5px"
-    }}>
-      <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.85)" }}>
-        {icon} {label}
-      </span>
-      <span style={{
-        fontSize: "13px", fontWeight: 700,
-        color: getScoreColor(score)
-      }}>
-        {score}/100
-      </span>
-    </div>
-    <div style={{
-      width: "100%", height: "6px",
-      backgroundColor: "rgba(255,255,255,0.15)",
-      borderRadius: "3px", overflow: "hidden"
-    }}>
-      <div style={{
-        width: `${score}%`, height: "100%",
-        backgroundColor: getScoreColor(score),
-        borderRadius: "3px"
-      }} />
-    </div>
-  </div>
-);
+const BarRow = ({ label, score }) => {
+    const barColor = score >= 75 ? "#10b981" : score >= 50 ? "#f59e0b" : "#ef4444";
+    return (
+        <div style={{ marginBottom: "20px" }}>
+            <div style={{
+                display: "flex", justifyContent: "space-between",
+                alignItems: "center", marginBottom: "9px"
+            }}>
+                <span style={{
+                    fontSize: "13px", fontWeight: 600,
+                    color: "rgba(255,255,255,0.8)",
+                    fontFamily: "'Segoe UI', system-ui, sans-serif"
+                }}>
+                    {label}
+                </span>
+                <span style={{
+                    fontSize: "13px", fontWeight: 900,
+                    color: barColor,
+                    fontFamily: "'Segoe UI', system-ui, sans-serif"
+                }}>
+                    {score}
+                </span>
+            </div>
+            {/* Track */}
+            <div style={{
+                width: "100%", height: "8px",
+                borderRadius: "99px",
+                background: "rgba(255,255,255,0.07)",
+                overflow: "hidden"
+            }}>
+                {/* Fill */}
+                <div style={{
+                    width: `${score}%`, height: "100%",
+                    borderRadius: "99px",
+                    background: `linear-gradient(90deg, ${barColor}88, ${barColor}ff)`,
+                }} />
+            </div>
+        </div>
+    );
+};
 
 const ShareCard = forwardRef(({ data }, ref) => {
-  const scoreColor = getScoreColor(data.overallScore);
-  const scoreLabel = getScoreLabel(data.overallScore);
+    const { label, emoji, color, glow } = getScoreConfig(data.overallScore);
 
-  return (
-    <div
-      ref={ref}
-      style={{
-        width: "560px",
-        background: "linear-gradient(160deg, #1e1b4b 0%, #3b0764 100%)",
-        padding: "40px",
-        borderRadius: "20px",
-        fontFamily: "Arial, Helvetica, sans-serif",
-        color: "white",
-        boxSizing: "border-box",
-      }}
-    >
-      {/* Header */}
-      <div style={{ marginBottom: "24px" }}>
-        <p style={{
-          fontSize: "12px",
-          color: "rgba(255,255,255,0.5)",
-          margin: "0 0 6px 0",
-          letterSpacing: "0.5px"
-        }}>
-          🔥 RoastMyResume.dev
-        </p>
-        <h1 style={{
-          fontSize: "26px",
-          fontWeight: 900,
-          margin: 0,
-          letterSpacing: "-0.5px"
-        }}>
-          My Resume Got Roasted
-        </h1>
-      </div>
+    return (
+        <div
+            ref={ref}
+            style={{
+                width: "600px",
+                background: "linear-gradient(150deg, #0d0b26 0%, #16103a 50%, #1f1545 100%)",
+                padding: "48px",
+                borderRadius: "20px",
+                fontFamily: "'Segoe UI', system-ui, sans-serif",
+                color: "white",
+                position: "relative",
+                overflow: "hidden",
+                boxSizing: "border-box",
+            }}
+        >
+            {/* Ambient top-right glow */}
+            <div style={{
+                position: "absolute", top: -100, right: -100,
+                width: 300, height: 300, borderRadius: "50%",
+                background: `radial-gradient(circle, ${color}1a 0%, transparent 65%)`,
+                pointerEvents: "none",
+            }} />
 
-      {/* Score Section */}
-      <div style={{
-        display: "flex",
-        gap: "24px",
-        alignItems: "flex-start",
-        marginBottom: "28px"
-      }}>
-        {/* Circle Score */}
-        <div style={{
-          width: "100px",
-          height: "100px",
-          borderRadius: "50%",
-          border: `3px solid ${scoreColor}`,
-          backgroundColor: "rgba(255,255,255,0.08)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0
-        }}>
-          <span style={{
-            fontSize: "38px",
-            fontWeight: 900,
-            color: scoreColor,
-            lineHeight: "1",
-            display: "block",
-            textAlign: "center"
-          }}>
-            {data.overallScore}
-          </span>
-          <span style={{
-            fontSize: "10px",
-            color: "rgba(255,255,255,0.5)",
-            display: "block",
-            textAlign: "center"
-          }}>
-            out of 100
-          </span>
+            {/* Ambient bottom-left glow */}
+            <div style={{
+                position: "absolute", bottom: -80, left: -80,
+                width: 260, height: 260, borderRadius: "50%",
+                background: "radial-gradient(circle, #6d28d91a 0%, transparent 65%)",
+                pointerEvents: "none",
+            }} />
+
+            {/* ── Brand header ── */}
+            <div style={{
+                display: "flex", alignItems: "center",
+                gap: "8px", marginBottom: "24px"
+            }}>
+                <span style={{ fontSize: "15px" }}>🔥</span>
+                <span style={{
+                    fontSize: "11px", fontWeight: 700,
+                    letterSpacing: "2.5px", textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.35)"
+                }}>
+                    RoastMyResume.dev
+                </span>
+            </div>
+
+            {/* ── Title ── */}
+            <div style={{
+                fontSize: "24px", fontWeight: 900,
+                letterSpacing: "-0.3px", marginBottom: "32px",
+                color: "white"
+            }}>
+                My Resume Got Roasted 🔥
+            </div>
+
+            {/* ── Score row ── */}
+            <div style={{
+                display: "flex", alignItems: "center",
+                gap: "24px", marginBottom: "36px"
+            }}>
+                <CircleScore score={data.overallScore} color={color} glow={glow} />
+
+                <div style={{ flex: 1 }}>
+                    {/* Pill badge — pure SVG, immune to html2canvas font metric bugs */}
+                    <svg
+                        width="210" height="32"
+                        style={{ display: "block", marginBottom: "14px" }}
+                    >
+                        <rect x="0" y="0" width="210" height="32" rx="16"
+                            fill={`${color}18`}
+                            stroke={color} strokeOpacity="0.4" strokeWidth="1"
+                        />
+                        <text
+                            x="105" y="16"
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fontFamily="'Segoe UI', system-ui, sans-serif"
+                            fontSize="11" fontWeight="800"
+                            letterSpacing="1.5"
+                            fill={color}
+                            style={{ textTransform: "uppercase" }}
+                        >
+                            {emoji} {label}
+                        </text>
+                    </svg>
+
+                    {/* Savage one-liner */}
+                    <div style={{
+                        fontSize: "13.5px", fontStyle: "italic",
+                        color: "rgba(255,255,255,0.7)",
+                        lineHeight: "1.65",
+                        fontFamily: "'Segoe UI', system-ui, sans-serif",
+                    }}>
+                        "{data.savageOneLiner}"
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Divider ── */}
+            <div style={{
+                height: "1px",
+                background: "rgba(255,255,255,0.07)",
+                marginBottom: "28px"
+            }} />
+
+            {/* ── Category bars ── */}
+            <div style={{ marginBottom: "24px" }}>
+                <BarRow label="💥  Impact Score" score={data.impactScore?.score} />
+                <BarRow label="🔍  Keyword Match" score={data.keywordMatch?.score} />
+                <BarRow label="🎯  Credibility Check" score={data.credibilityCheck?.score} />
+                <BarRow label="🤖  ATS Friendliness" score={data.atsFriendliness?.score} />
+            </div>
+
+            {/* ── Biggest issue box ── */}
+            <div style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderLeft: `3px solid ${color}`,
+                borderRadius: "10px",
+                padding: "16px 18px",
+                marginBottom: "32px",
+            }}>
+                <div style={{
+                    fontSize: "10px", fontWeight: 800,
+                    letterSpacing: "1.5px", textTransform: "uppercase",
+                    color: color, marginBottom: "10px",
+                    fontFamily: "'Segoe UI', system-ui, sans-serif",
+                }}>
+                    🚨 Biggest Issue
+                </div>
+                <div style={{
+                    fontSize: "13px", color: "rgba(255,255,255,0.75)",
+                    lineHeight: "1.65",
+                    fontFamily: "'Segoe UI', system-ui, sans-serif",
+                }}>
+                    {data.topIssue1}
+                </div>
+            </div>
+
+            {/* ── Footer ── */}
+            <div style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                borderTop: "1px solid rgba(255,255,255,0.07)",
+                paddingTop: "20px",
+            }}>
+                <span style={{
+                    fontSize: "12px", color: "rgba(255,255,255,0.28)",
+                    fontFamily: "'Segoe UI', system-ui, sans-serif",
+                }}>
+                    Get your resume roasted at
+                </span>
+                <span style={{
+                    fontSize: "13px", fontWeight: 800,
+                    color: "#a78bfa",
+                    fontFamily: "'Segoe UI', system-ui, sans-serif",
+                }}>
+                    roastmyresume.dev 🔥
+                </span>
+            </div>
         </div>
-
-        {/* Label + One Liner */}
-        <div style={{ flex: 1, paddingTop: "4px" }}>
-          <p style={{
-            fontSize: "13px",
-            fontWeight: 700,
-            color: scoreColor,
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            margin: "0 0 8px 0"
-          }}>
-            {scoreLabel}
-          </p>
-          <p style={{
-            fontSize: "13px",
-            color: "rgba(255,255,255,0.8)",
-            fontStyle: "italic",
-            lineHeight: "1.6",
-            margin: 0
-          }}>
-            "{data.savageOneLiner}"
-          </p>
-        </div>
-      </div>
-
-      {/* Divider */}
-      <div style={{
-        height: "1px",
-        backgroundColor: "rgba(255,255,255,0.1)",
-        marginBottom: "24px"
-      }} />
-
-      {/* Category Scores */}
-      <div style={{ marginBottom: "24px" }}>
-        <CategoryRow icon="💥" label="Impact" score={data.impactScore?.score} />
-        <CategoryRow icon="🔍" label="Keywords" score={data.keywordMatch?.score} />
-        <CategoryRow icon="🎯" label="Credibility" score={data.credibilityCheck?.score} />
-        <CategoryRow icon="🤖" label="ATS" score={data.atsFriendliness?.score} />
-      </div>
-
-      {/* Biggest Issue Box */}
-      <div style={{
-        backgroundColor: "rgba(255,255,255,0.08)",
-        borderRadius: "12px",
-        padding: "16px",
-        marginBottom: "28px",
-        borderLeft: "3px solid #ef4444"
-      }}>
-        <p style={{
-          fontSize: "10px",
-          color: "#ef4444",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "1px",
-          margin: "0 0 6px 0"
-        }}>
-          🚨 Biggest Issue
-        </p>
-        <p style={{
-          fontSize: "13px",
-          color: "rgba(255,255,255,0.85)",
-          lineHeight: "1.5",
-          margin: 0
-        }}>
-          {data.topIssue1}
-        </p>
-      </div>
-
-      {/* Divider */}
-      <div style={{
-        height: "1px",
-        backgroundColor: "rgba(255,255,255,0.1)",
-        marginBottom: "16px"
-      }} />
-
-      {/* Footer */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center"
-      }}>
-        <p style={{
-          fontSize: "12px",
-          color: "rgba(255,255,255,0.4)",
-          margin: 0
-        }}>
-          Get your resume roasted at
-        </p>
-        <p style={{
-          fontSize: "13px",
-          fontWeight: 700,
-          color: "#a78bfa",
-          margin: 0
-        }}>
-          roastmyresume.dev 🔥
-        </p>
-      </div>
-    </div>
-  );
+    );
 });
 
 ShareCard.displayName = "ShareCard";
-export default ShareCard;
+export default ShareCard;   
