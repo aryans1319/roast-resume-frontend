@@ -4,17 +4,16 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ["Bricolage Grotesque","system-ui","sans-serif"],
-        mono:    ["IBM Plex Mono","monospace"],
-        body:    ["IBM Plex Sans","system-ui","sans-serif"],
+        sans: ["Outfit","system-ui","sans-serif"],
+        mono: ["JetBrains Mono","monospace"],
       },
       colors: {
-        bg:     "#0F0F0F",
-        card:   "#1A1A1A",
-        amber:  "#F59E0B",
-        green:  "#34D399",
-        red:    "#F87171",
-        orange: "#FB923C",
+        bg:    "#0F1115",
+        s1:    "#14171D",
+        amber: "#F5A623",
+        ok:    "#4ADE80",
+        warn:  "#FB923C",
+        err:   "#F87171",
       },
     },
   },
