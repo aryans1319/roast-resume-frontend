@@ -1,68 +1,88 @@
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { PersonalityProvider, usePersonality } from "./context/PersonalityContext";
 import UploadForm from "./components/UploadForm";
-import RoastResult from "./components/RoastResult";
-import RoastLoader from "./components/RoastLoader";
+import LoadingScreen from "./components/LoadingScreen";
+import ResultDashboard from "./components/ResultDashboard";
 import { roastResume } from "./services/api";
 
-const App = () => {
-  const [result, setResult] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+const scoreColor = (s) => s>=75 ? "var(--green)" : s>=60 ? "var(--orange)" : "var(--red)";
 
-  const handleSubmit = async (resumeFile, jobDescription) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await roastResume(resumeFile, jobDescription);
-      setResult(data);
-    } catch (err) {
-      setError(err.response?.data?.error || "Something went wrong. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+const AppInner = () => {
+  const [result, setResult]     = useState(null);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState(null);
+
+  const onSubmit = async (file, jd) => {
+    setLoading(true); setError(null);
+    try { setResult(await roastResume(file, jd)); }
+    catch(e) { setError(e.response?.data?.error || "Something went wrong."); }
+    finally { setLoading(false); }
   };
 
-  const handleReset = () => {
-    setResult(null);
-    setError(null);
-  };
+  const onReset = () => { setResult(null); setError(null); };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight:"100vh", background:"var(--bg)" }}>
+      <AnimatePresence>{loading && <LoadingScreen key="loader" />}</AnimatePresence>
 
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 py-6 mb-10">
-        <div className="max-w-2xl mx-auto px-4 text-center">
-          <h1 className="text-3xl font-black text-gray-800">
-            🔥 RoastMyResume
-          </h1>
-          <p className="text-gray-500 mt-1 text-sm">
-            Brutally honest AI feedback on your resume. No sugarcoating.
-          </p>
+      <header style={{ position:"sticky", top:0, zIndex:40, background:"rgba(15,15,15,0.95)", backdropFilter:"blur(8px)", borderBottom:"1px solid var(--line)", padding:"0 20px" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", height:50 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:15 }}>🔥</span>
+            <span style={{ fontFamily:"var(--f-display)", fontSize:15, fontWeight:700, color:"var(--t1)", letterSpacing:"-0.3px" }}>RoastMyResume</span>
+          </div>
+
+          {result ? (
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:7, padding:"4px 11px", background:"var(--card)", border:"1px solid var(--line)", borderRadius:"var(--r2)" }}>
+                <span className="label">Score</span>
+                <span style={{ fontFamily:"var(--f-mono)", fontSize:13, fontWeight:700, color:scoreColor(result.overallScore) }}>
+                  {result.overallScore}/100
+                </span>
+              </div>
+              <button onClick={onReset} className="label" style={{ background:"none", border:"none", cursor:"pointer", color:"var(--t3)", transition:"color 0.15s", padding:"4px 8px" }}
+                onMouseEnter={e=>e.target.style.color="var(--t2)"}
+                onMouseLeave={e=>e.target.style.color="var(--t3)"}
+              >
+                ← New
+              </button>
+            </div>
+          ) : (
+            <span className="label">AI Resume Analyzer</span>
+          )}
         </div>
-      </div>
+      </header>
 
-      {/* Main Content */}
-      <div className="px-4 pb-16">
-        {error && (
-          <div className="max-w-2xl mx-auto mb-6 bg-red-50 border border-red-200
-            rounded-xl p-4 text-red-600 text-sm text-center">
-            {error}
-          </div>
-        )}
+      <main style={{ paddingTop: result ? 28 : 48 }}>
+        <AnimatePresence>
+          {error && (
+            <motion.div initial={{ opacity:0,y:-8 }} animate={{ opacity:1,y:0 }} exit={{ opacity:0 }}
+              style={{ maxWidth:520, margin:"0 auto 20px", padding:"11px 16px", background:"var(--red-dim)", border:"1px solid rgba(248,113,113,0.2)", borderRadius:"var(--r3)", fontFamily:"var(--f-body)", fontSize:13, color:"var(--red)", textAlign:"center" }}>
+              {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {isLoading ? (
-          <div className="max-w-2xl mx-auto bg-white border border-gray-200 rounded-2xl shadow-sm">
-            <RoastLoader />
-          </div>
-        ) : result ? (
-          <RoastResult data={result} onReset={handleReset} />
-        ) : (
-          <UploadForm onSubmit={handleSubmit} isLoading={isLoading} />
-        )}
-      </div>
+        <AnimatePresence mode="wait">
+          {!loading && (
+            result ? (
+              <motion.div key="r" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} transition={{ duration:0.2 }}>
+                <ResultDashboard data={result} onReset={onReset} />
+              </motion.div>
+            ) : (
+              <motion.div key="u" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} transition={{ duration:0.2 }}>
+                <UploadForm onSubmit={onSubmit} isLoading={loading} />
+              </motion.div>
+            )
+          )}
+        </AnimatePresence>
+      </main>
     </div>
   );
 };
 
-export default App;
+export default function App() {
+  return <PersonalityProvider><AppInner /></PersonalityProvider>;
+}
